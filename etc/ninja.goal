@@ -1,0 +1,50 @@
+#!/usr/bin/env goal
+
+/ join by newlines
+nl:{x+"\n"+y}
+/ join by spaces
+sp:{x+" "+y}
+
+/ all files in dir x
+fs:{f:read x
+    f["name"]@&~f"dir"}
+(src;test):fs'"src" "run"
+
+/ get all items of x where ".cpp"~|4#|x
+/ now you can cpp@fs x
+cpp:{x@&{".cpp"~+/|4#|("c"$)'"c"$x}'x}
+
+/ generate the ninja file
+say'("cxx = clang++"
+     "cxxflags = "+sp/("-g -Wall -Wextra -Wno-c99-extensions"
+                       "-pedantic -fblocks -O3 -Iinc -Iinc")
+     "libs = "+sp/{-1_shell "pkg-config --cflags $x"}'()
+     rq/rule cpp
+          depfile = $out.d
+          command = $cxx -c -MD -MF $out.d $cxxflags $libs -o $out $in
+          description = [cpp] $cxx $in -> $out/
+     rq/rule lib
+         command = ar rcs $out $in
+         description = [static] ar $in -> $out/
+     rq/rule shared
+         command = $cxx -shared -o $out $in
+         description = [shared] $cxx $in -> $out/
+     rq/rule lnk
+         command = $cxx $cxxflags -o $out $in $lnkflags
+         description = [link] $cxx $in -> $out/
+     rq/rule mkdir
+         command = mkdir -p $out/
+     rq/rule rm
+         command = rm -rf $in/
+     rq/rule exe
+         command = $in/
+     "build clean: rm o"
+     "build o: mkdir"
+     [d:"src"
+      nl/(nl/{"build o/$d/"+x+".o: cpp $d/$x"}'cpp src
+          "build o/libnvm.a: lib "+sp/{"o/$d/"+x+".o"}'cpp src)]
+					[d:"run"
+      nl/(nl/{"build o/$d/"+x+".o: cpp $d/$x"}'cpp test
+          "build o/test: lnk "+sp/,[{"o/$d/"+x+".o"}'cpp test;"o/libnvm.a"])]
+     "build test: exe o/test"
+     "default o/libnvm.a")
