@@ -1,0 +1,16 @@
+[package]
+name = "nvm"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "size"
+path = "exe/size.rs"
+test = false
+
+[[bin]]
+name = "nvm"
+path = "src/main.rs"
+test = false
+
+[dependencies]
