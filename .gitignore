@@ -1,3 +1,4 @@
 vgcore.*
 rustc-ice*
 /target
+/.ninja_log
