@@ -3,39 +3,62 @@ use std::fmt;
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Obj {
     I(i32),
-    Sz(usize),
     C(char),
-    A(usize), /* vec from x to y on the variable stack */
+    F(f64),
+    Fun(usize),
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+#[repr(u8)]
+pub enum ObjType {
+    I,
+    C,
+    F,
+    Fun,
 }
 
 impl fmt::Display for Obj {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", match self {
             Obj::I(x) => x.to_string(),
-            Obj::Sz(x) => x.to_string(),
             Obj::C(c) => c.to_string(),
-            Obj::A(x) => format!("[{x}]"),
+            Obj::F(x) => x.to_string(),
+            Obj::Fun(x) => format!("{{&{x}}}"),
         })
     }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Instr {
+    /* variables */
     Push(Obj),
     Pop,
+    Local(u8),
+    Load(u8),
 
-    AddI,
-    SubI,
-    MulI,
-    DivI,
+    /* math */
+    AddF,
+    SubF,
+    MulF,
+    DivF,
 
+    /* functions */
+    Apply0,
+    Apply1,
+    ApplyN,
+
+    /* stack */
+    Swap2,
+
+    /* control */
     Ret,
     Break,
+    Nop,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[repr(u8)]
-pub enum BlockType {
+pub enum BlkType {
     Fun,
     One,
     Two,
@@ -49,9 +72,9 @@ pub enum Time {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Block(pub BlockType, pub Time, pub usize);
+pub struct Blk(pub BlkType, pub Time, pub usize);
 
-impl Block {
+impl Blk {
     #[inline]
     pub fn idx(&self) -> usize {
         self.2
@@ -61,13 +84,13 @@ impl Block {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Body<'a> {
     pub start: usize,
-    pub vars: u64,
-    pub names: Vec<&'a str>,
+    pub vars: usize,
+    pub names: Vec<(&'a str, ObjType)>,
     pub export: Vec<bool>,
 }
 
 impl<'a> Body<'a> {
-    pub fn exported(&self) -> Vec<&'a str> {
+    pub fn exported(&self) -> Vec<(&'a str, ObjType)> {
         assert_eq!(self.names.len(), self.export.len());
         self.names
             .iter()
