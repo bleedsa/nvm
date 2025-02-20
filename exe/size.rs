@@ -1,4 +1,4 @@
-use nvm::bc::{Instr, Body, Block, Obj};
+use nvm::bc::{Block, Body, Instr, Obj};
 
 macro_rules! sizeof_each {
     [$($t:ty),*] => {{
@@ -7,10 +7,7 @@ macro_rules! sizeof_each {
 }
 
 fn main() {
-    sizeof_each![
-        Instr,
-        Body,
-        Block,
-        Obj
-    ].into_iter().for_each(|(x, size)| println!("{x}:\t{}", size * 8));
+    sizeof_each![Instr, Body, Block, Obj]
+        .into_iter()
+        .for_each(|(x, size)| println!("{x}:\t{}", size * 8));
 }

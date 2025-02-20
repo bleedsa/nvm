@@ -1,6 +1,9 @@
 /** a simple lisp frontend for testing before i write the k and lua */
-
-use crate::{Res, err_fmt, bc::{Instr, Body, Block, Obj, BlockType, Time}};
+use crate::{
+    Res,
+    bc::{Block, BlockType, Body, Instr, Obj, Time},
+    err_fmt,
+};
 
 macro_rules! push {
     ($v:expr => [ $x:expr ]) => {{
@@ -15,12 +18,26 @@ macro_rules! push {
     }};
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+macro_rules! push_vec {
+    ($v:expr => $x:expr) => {{
+        let i = $v.len();
+        push!($v => [
+            Instr::Push(Obj::Sz($x.len())),
+            Instr::Break
+        ]);
+        $v.append($x);
+        i
+    }};
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Leaf<'a> {
     X(&'static str),
     I(i32),
+    C(char),
     M(&'static str, &'a Leaf<'a>),
     D(&'static str, &'a Leaf<'a>, &'a Leaf<'a>),
+    A(Vec<Leaf<'a>>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -55,6 +72,56 @@ impl<'a> Machine<'a> {
                 self.blocks.push(Block(BlockType::Fun, Time::Immediate, b));
                 Ok(())
             }
+
+            Leaf::C(x) => {
+                let i = push!(self.instrs => [
+                    Instr::Push(Obj::C(*x)),
+                    Instr::Ret
+                ]);
+                let b = push!(self.bodies => [Body {
+                    start: i,
+                    vars: 0,
+                    names: Vec::new(),
+                    export: Vec::new(),
+                }]);
+                self.blocks.push(Block(BlockType::Fun, Time::Immediate, b));
+                Ok(())
+            }
+
+            Leaf::D("+", Leaf::I(x), Leaf::I(y)) => {
+                let i = push!(self.instrs => [
+                    Instr::Push(Obj::I(*x)),
+                    Instr::Push(Obj::I(*y)),
+                    Instr::AddI,
+                    Instr::Ret
+                ]);
+                let b = push!(self.bodies => [Body {
+                    start: i,
+                    vars: 0,
+                    names: Vec::new(),
+                    export: Vec::new(),
+                }]);
+                self.blocks.push(Block(BlockType::Fun, Time::Immediate, b));
+                Ok(())
+            }
+
+            Leaf::D("-", Leaf::I(x), Leaf::I(y)) => {
+                let i = push!(self.instrs => [
+                    Instr::Push(Obj::I(*x)),
+                    Instr::Push(Obj::I(*y)),
+                    Instr::SubI,
+                    Instr::Ret
+                ]);
+                let b = push!(self.bodies => [Body {
+                    start: i,
+                    vars: 0,
+                    names: Vec::new(),
+                    export: Vec::new(),
+                }]);
+                self.blocks.push(Block(BlockType::Fun, Time::Immediate, b));
+                Ok(())
+            }
+
             x => err_fmt!("cannot compile leaf {x:?}"),
         }
     }

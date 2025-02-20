@@ -1,6 +1,6 @@
 pub mod bc;
-pub mod vm;
 pub mod lisp;
+pub mod vm;
 
 pub type Res<T> = Result<T, String>;
 
