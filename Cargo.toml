@@ -13,4 +13,11 @@ name = "nvm"
 path = "src/main.rs"
 test = false
 
-[dependencies]
+[[bench]]
+name = "bc"
+harness = false
+
+[dev-dependencies]
+criterion = "0.5.1"
+pad = "0.1.6"
+colored = "3.0.0"

@@ -1,28 +1,35 @@
 use std::fmt;
 
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum Obj {
-    I(i32),
-    C(char),
-    F(f64),
-    Fun(usize),
+macro_rules! impl_obj_enum {
+    (($obj:ident, $objtype:ident) => { $( $n:ident($($t:ty),*) ),* $(,)* }) => {
+        #[derive(Debug, Copy, Clone, PartialEq)]
+        pub enum $obj {
+            $($n($($t),*)),*
+        }
+
+        #[derive(Debug, Copy, Clone, PartialEq)]
+        #[repr(u8)]
+        pub enum $objtype {
+            $($n),*
+        }
+    }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
-#[repr(u8)]
-pub enum ObjType {
-    I,
-    C,
-    F,
-    Fun,
-}
+impl_obj_enum!((Obj, ObjType) => {
+    C(char),
+    F(f64),
+    U(usize),
+    T(usize),
+    Fun(usize),
+});
 
 impl fmt::Display for Obj {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", match self {
-            Obj::I(x) => x.to_string(),
             Obj::C(c) => c.to_string(),
+            Obj::U(x) => x.to_string(),
             Obj::F(x) => x.to_string(),
+            Obj::T(x) => format!("[&{x}]"),
             Obj::Fun(x) => format!("{{&{x}}}"),
         })
     }
@@ -33,14 +40,34 @@ pub enum Instr {
     /* variables */
     Push(Obj),
     Pop,
-    Local(u8),
-    Load(u8),
+    /** pop and create variable x */
+    Local(usize),
+    /** push value loaded from x */
+    Load(usize),
+    /** create a new label */
+    Label(usize),
 
     /* math */
     AddF,
     SubF,
     MulF,
     DivF,
+    NegF,
+    CmpF,
+
+    /* vectors & tables */
+    /** pop x and make a table */
+    Table(usize),
+    /** pop x and make a vector */
+    Vec(usize),
+    /** pop all and make a vector */
+    VecFull,
+    /** pop a value and push it to a vector */
+    VecPush(usize),
+    /** push the last value in a vec */
+    VecLast(usize),
+    /** pop a value off a vec */
+    VecPop(usize),
 
     /* functions */
     Apply0,
@@ -48,12 +75,23 @@ pub enum Instr {
     ApplyN,
 
     /* stack */
+    Dup,
     Swap2,
+    /** pop a vec, then pop each item from that vec */
+    PopVec,
 
     /* control */
     Ret,
     Break,
     Nop,
+    /** jump to immediate block x */
+    Jmp(usize),
+    /** pop and jump if zero */
+    JmpZ(usize),
+    /** jump to a label if zero */
+    LJmpZ(usize),
+    /** jump to a label if not zero */
+    LJmpNZ(usize),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
